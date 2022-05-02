@@ -1,5 +1,9 @@
 ## This code is based on the code Josh Day's example here:
 ## https://www4.stat.ncsu.edu/~post/josh/LASSO_Ridge_Elastic_Net_-_Examples.html
+## 1. Add the codes to display the coef of the glmnet models.
+## 2. Add the codes to find the optimized lambda value
+## 3. Add teh codes to plot the relationship between predicted value and y.test
+## 4. Add the codes to plot the relationship between lambda value and MSE
 
 ## install "glmnet" package with: install.packages("glmnet")
 library(glmnet)  # Package to fit ridge/lasso/elastic net models
@@ -42,7 +46,7 @@ y.test <- y[-train_rows]
 ##
 ################################
 alpha0.fit <- cv.glmnet(x.train, y.train, type.measure="mse", 
-  alpha=0, family="gaussian")
+                        alpha=0, family="gaussian")
 
 ## now let's run the Testing dataset on the model created for
 ## alpha = 0 (i.e. Ridge Regression).
@@ -86,19 +90,37 @@ alpha0.predicted <-
 ## the predicted 'y' values and the true 'y' values in the 
 ## Testing dataset...
 mean((y.test - alpha0.predicted)^2)
-
+plot(y.test,alpha0.predicted)
+plot(alpha0.fit)
+alpha0.fit$lambda.1se
 ################################
 ##
 ## alpha = 1, Lasso Regression
 ##
 ################################
 alpha1.fit <- cv.glmnet(x.train, y.train, type.measure="mse", 
-  alpha=1, family="gaussian")
+                        alpha=1, family="gaussian")
 
 alpha1.predicted <- 
   predict(alpha1.fit, s=alpha1.fit$lambda.1se, newx=x.test)
 
 mean((y.test - alpha1.predicted)^2)
+plot(y.test,alpha1.predicted)
+
+## The optimal lambda value
+plot(alpha1.fit)
+alpha1.fit$lambda.1se
+
+## All coefficients of the best model 
+coef(alpha1.fit, s=alpha1.fit$lambda.1se) 
+
+## All nonzero cofficients of the best model
+outcome <- coef(alpha1.fit, s=alpha1.fit$lambda.1se) 
+coef.alpha1.fit <- outcome[outcome[,1]!=0]
+rname.alpha1.fit <- rownames(coef(alpha1.fit, s = 'lambda.1se'))[coef(alpha1.fit, s = 'lambda.1se')[,1]!= 0]
+cbind(rname.alpha1.fit,coef.alpha1.fit)
+
+
 
 ################################
 ##
@@ -106,13 +128,15 @@ mean((y.test - alpha1.predicted)^2)
 ##
 ################################
 alpha0.5.fit <- cv.glmnet(x.train, y.train, type.measure="mse", 
-  alpha=0.5, family="gaussian")
+                          alpha=0.5, family="gaussian")
 
 alpha0.5.predicted <- 
   predict(alpha0.5.fit, s=alpha0.5.fit$lambda.1se, newx=x.test)
 
 mean((y.test - alpha0.5.predicted)^2)
-
+plot(y.test,alpha0.5.predicted)
+plot(alpha0.5.fit)
+alpha0.5.fit$lambda.1se
 ################################
 ##
 ## However, the best thing to do is just try a bunch of different
@@ -143,7 +167,7 @@ for (i in 0:10) {
   ## uses the variable name we just created as the reference.
   list.of.fits[[fit.name]] <-
     cv.glmnet(x.train, y.train, type.measure="mse", alpha=i/10, 
-      family="gaussian")
+              family="gaussian")
 }
 
 ## Now we see which alpha (0, 0.1, ... , 0.9, 1) does the best job
@@ -155,10 +179,11 @@ for (i in 0:10) {
   ## Use each model to predict 'y' given the Testing dataset
   predicted <- 
     predict(list.of.fits[[fit.name]], 
-      s=list.of.fits[[fit.name]]$lambda.1se, newx=x.test)
+            s=list.of.fits[[fit.name]]$lambda.1se, newx=x.test)
   
   ## Calculate the Mean Squared Error...
   mse <- mean((y.test - predicted)^2)
+  plot(y.test,predicted,xlab="y.test",ylab=paste0(fit.name,".predicted"),xlim=c(-20,20),ylim=c(-20,20))
   
   ## Store the results
   temp <- data.frame(alpha=i/10, mse=mse, fit.name=fit.name)
@@ -176,7 +201,7 @@ results
 ##
 ##############################################################
 
-set.seed(42) # Set seed for reproducibility
+set.seed(42) # Set seed for rere__producibility
 
 n <- 1000    # Number of observations
 p <- 5000     # Number of predictors included in model
@@ -200,7 +225,7 @@ for (i in 0:10) {
   
   list.of.fits[[fit.name]] <-
     cv.glmnet(x.train, y.train, type.measure="mse", alpha=i/10, 
-      family="gaussian")
+              family="gaussian")
 }
 
 results <- data.frame()
@@ -209,9 +234,10 @@ for (i in 0:10) {
   
   predicted <- 
     predict(list.of.fits[[fit.name]], 
-      s=list.of.fits[[fit.name]]$lambda.1se, newx=x.test)
+            s=list.of.fits[[fit.name]]$lambda.1se, newx=x.test)
   
   mse <- mean((y.test - predicted)^2)
+  plot(y.test,predicted,xlab="y.test",ylab=paste0(fit.name,".predicted"),xlim=c(-20,20),ylim=c(-20,20))
   
   temp <- data.frame(alpha=i/10, mse=mse, fit.name=fit.name)
   results <- rbind(results, temp)
